@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MiniMax 链接分析</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <main class="wrap">
+      <input id="apiKeyInput" type="password" placeholder="MiniMax API Key（必填）" autocomplete="off" />
+      <input id="groupIdInput" type="text" placeholder="GroupId（可选）" />
+      <input id="modelInput" type="text" value="MiniMax-Text-01" placeholder="模型名（可选）" />
+      <input id="urlInput" type="url" placeholder="输入网页链接后按回车，例如 https://example.com" />
+      <pre id="output">填写 API Key 与链接后按回车，我会调用 MiniMax 返回分析报告。</pre>
+    </main>
+
+    <script>
+      const apiKeyInput = document.getElementById('apiKeyInput');
+      const groupIdInput = document.getElementById('groupIdInput');
+      const modelInput = document.getElementById('modelInput');
+      const urlInput = document.getElementById('urlInput');
+      const output = document.getElementById('output');
+
+      apiKeyInput.value = sessionStorage.getItem('minimax_api_key') || '';
+      groupIdInput.value = sessionStorage.getItem('minimax_group_id') || '';
+      modelInput.value = sessionStorage.getItem('minimax_model') || 'MiniMax-Text-01';
+
+      async function analyze({ url, apiKey, groupId, model }) {
+        output.textContent = '分析中，请稍候...';
+        const res = await fetch('/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, apiKey, groupId, model }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          output.textContent = `❌ ${data.error || '分析失败'}`;
+          return;
+        }
+
+        output.textContent = data.report;
+      }
+
+      urlInput.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+
+        const apiKey = apiKeyInput.value.trim();
+        const groupId = groupIdInput.value.trim();
+        const model = modelInput.value.trim();
+        const url = urlInput.value.trim();
+
+        if (!apiKey) {
+          output.textContent = '请先输入 MiniMax API Key。';
+          return;
+        }
+
+        if (!url) {
+          output.textContent = '请输入链接后再按回车。';
+          return;
+        }
+
+        sessionStorage.setItem('minimax_api_key', apiKey);
+        sessionStorage.setItem('minimax_group_id', groupId);
+        sessionStorage.setItem('minimax_model', model || 'MiniMax-Text-01');
+
+        analyze({ url, apiKey, groupId, model }).catch((err) => {
+          output.textContent = `❌ ${err.message}`;
+        });
+      });
+    </script>
+  </body>
+</html>
