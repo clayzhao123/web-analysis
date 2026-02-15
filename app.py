@@ -125,7 +125,11 @@ class Handler(BaseHTTPRequestHandler):
         raw = self.rfile.read(length).decode("utf-8") if length else "{}"
 
         try:
-            body = json.loads(raw)
+            try:
+                body = json.loads(raw)
+            except json.JSONDecodeError as e:
+                self._send_json(400, {"error": f"请求体不是合法 JSON：{e}"})
+                return
             url = str(body.get("url", "")).strip()
             api_key = str(body.get("apiKey", "")).strip()
             group_id = str(body.get("groupId", "")).strip()
@@ -160,6 +164,9 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(500, {"error": f"服务异常：{exc}"})
 
     def _send_file(self, filepath: Path, content_type: str):
+        if not filepath.is_file():
+            self.send_error(404, "File Not Found")
+            return
         content = filepath.read_text(encoding="utf-8")
         data = content.encode("utf-8")
         self.send_response(200)
